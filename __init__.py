@@ -1,6 +1,4 @@
-from flask import Flask, render_template_string, render_template, jsonify
-from flask import render_template
-from flask import json
+from flask import Flask, render_template, jsonify,json
 from datetime import datetime
 from urllib.request import urlopen
 import sqlite3
@@ -8,30 +6,40 @@ import requests
 from datetime import datetime
 from collections import Counter                                                                                                                                       
 app = Flask(__name__)
-@app.route("/commits/")
+@app.route('/commits/')
 def commits():
-    return render_template("commits.html") 
-@app.route('/api/commits/')
-def commits_data():
-    url = 'https://api.github.com/repos/Zvki1/5MCSI_Metriques/commits'
-    response = requests.get(url)
-    commits = response.json()
+    return render_template("commits.html")
 
-    # Compter les minutes
-    minutes_counter = Counter()
+@app.route('/get-commits-data/')
+def get_commits_data():
+    from urllib.request import urlopen
+    import json
+    from datetime import datetime
+    
+    response = urlopen('https://api.github.com/repos/OpenRSI/5MCSI_Metriques/commits')
+    raw_content = response.read()
+    json_content = json.loads(raw_content.decode('utf-8'))
+    
+    commits_by_minute = {}
+    
+    for commit in json_content:
+        date_string = commit.get('commit', {}).get('author', {}).get('date')
+        if date_string:
+            date_object = datetime.strptime(date_string, '%Y-%m-%dT%H:%M:%SZ')
+            minute = date_object.minute
+            
+            if minute in commits_by_minute:
+                commits_by_minute[minute] += 1
+            else:
+                commits_by_minute[minute] = 1
+    
+    # Convertir notre dictionnaire en liste pour le JSON
+    result = []
+    for minute, count in commits_by_minute.items():
+        result.append({'minute': minute, 'count': count})
+    
+    return jsonify(results=result)
 
-    for commit in commits:
-        try:
-            date_str = commit['commit']['author']['date']
-            date_obj = datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%SZ')
-            minute = date_obj.minute
-            minutes_counter[minute] += 1
-        except KeyError:
-            continue  # En cas de commit mal formé
-
-    # Formatage pour le frontend
-    result = [{'minute': str(minute).zfill(2), 'count': count} for minute, count in sorted(minutes_counter.items())]
-    return jsonify(result)
 @app.route("/histogramme/")
 def histogramme():
     return render_template("histogramme.html")

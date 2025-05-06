@@ -1,40 +1,54 @@
-<!DOCTYPE html>
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Commits par minute</title>
+    <title>Statistiques de Commits</title>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
   </head>
   <body>
-    <h2 style="text-align: center;">Nombre de Commits GitHub par Minute</h2>
-    <div id="chart_div" style="width: 90%; height: 500px; margin: auto;"></div>
-
+    <h1>Statistiques des Commits par Minute</h1>
+    <div id="chart_div" style="width: 900px; height: 500px;"></div>
     <script>
       google.charts.load('current', { packages: ['corechart'] });
       google.charts.setOnLoadCallback(drawChart);
 
       function drawChart() {
-        fetch('/api/commits/')
+        fetch('/get-commits-data/')
           .then(response => response.json())
           .then(data => {
+            // Créer un tableau de données pour Google Charts
             var dataTable = new google.visualization.DataTable();
             dataTable.addColumn('string', 'Minute');
             dataTable.addColumn('number', 'Nombre de Commits');
-
-            data.forEach(entry => {
-              dataTable.addRow([entry.minute, entry.count]);
+            
+            // Trier les résultats par minute
+            data.results.sort((a, b) => a.minute - b.minute);
+            
+            // Ajouter les données au tableau
+            data.results.forEach(entry => {
+              dataTable.addRow([entry.minute.toString(), entry.count]);
             });
 
+            // Options pour l'histogramme
             var options = {
-              title: 'Distribution des Commits GitHub par Minute',
-              hAxis: { title: 'Minute (0-59)' },
-              vAxis: { title: 'Commits' },
-              legend: 'none',
-              colors: ['#3366cc']
+              title: 'Nombre de Commits par Minute',
+              hAxis: {
+                title: 'Minute de l\'heure',
+                titleTextStyle: { color: '#333' }
+              },
+              vAxis: {
+                title: 'Nombre de Commits',
+                minValue: 0
+              },
+              legend: { position: 'none' }
             };
 
+            // Créer l'histogramme
             var chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
             chart.draw(dataTable, options);
+          })
+          .catch(error => {
+            console.error('Erreur lors de la récupération des données:', error);
+            document.getElementById('chart_div').innerHTML = 'Erreur lors de la récupération des données.';
           });
       }
     </script>
