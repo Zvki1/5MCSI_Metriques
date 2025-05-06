@@ -4,11 +4,34 @@ from flask import json
 from datetime import datetime
 from urllib.request import urlopen
 import sqlite3
-                                                                                                                                       
+import requests
+from datetime import datetime
+from collections import Counter                                                                                                                                       
 app = Flask(__name__)
 @app.route("/commits/")
 def commits():
     return render_template("commits.html") 
+@app.route('/api/commits/')
+def commits_data():
+    url = 'https://api.github.com/repos/Zvki1/5MCSI_Metriques/commits'
+    response = requests.get(url)
+    commits = response.json()
+
+    # Compter les minutes
+    minutes_counter = Counter()
+
+    for commit in commits:
+        try:
+            date_str = commit['commit']['author']['date']
+            date_obj = datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%SZ')
+            minute = date_obj.minute
+            minutes_counter[minute] += 1
+        except KeyError:
+            continue  # En cas de commit mal formé
+
+    # Formatage pour le frontend
+    result = [{'minute': str(minute).zfill(2), 'count': count} for minute, count in sorted(minutes_counter.items())]
+    return jsonify(result)
 @app.route("/histogramme/")
 def histogramme():
     return render_template("histogramme.html")
