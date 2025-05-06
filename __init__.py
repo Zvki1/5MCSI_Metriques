@@ -7,39 +7,44 @@ from datetime import datetime
 from collections import Counter                                                                                                                                       
 app = Flask(__name__)
 @app.route('/commits/')
-def commits():
+def commits_graph():
     return render_template("commits.html")
 
-@app.route('/get-commits-data/')
+@app.route('/commits-data/')
 def get_commits_data():
-    from urllib.request import urlopen
-    import json
-    from datetime import datetime
-    
-    response = urlopen('https://api.github.com/repos/OpenRSI/5MCSI_Metriques/commits')
+    # Récupération des commits depuis l'API GitHub
+    response = urlopen('https://api.github.com/repos/SofianeKhedim/5MCSI_Metriques/commits')
     raw_content = response.read()
-    json_content = json.loads(raw_content.decode('utf-8'))
+    commits_data = json.loads(raw_content.decode('utf-8'))
     
-    commits_by_minute = {}
+    # Structure pour stocker le nombre de commits par minute
+    commit_minutes = {}
     
-    for commit in json_content:
-        date_string = commit.get('commit', {}).get('author', {}).get('date')
-        if date_string:
-            date_object = datetime.strptime(date_string, '%Y-%m-%dT%H:%M:%SZ')
-            minute = date_object.minute
+    # Extraction des dates et regroupement par minute
+    for commit in commits_data:
+        commit_date = commit.get('commit', {}).get('author', {}).get('date')
+        if commit_date:
+            # Conversion de la date au format datetime
+            date_object = datetime.strptime(commit_date, '%Y-%m-%dT%H:%M:%SZ')
             
-            if minute in commits_by_minute:
-                commits_by_minute[minute] += 1
+            # Créer une clé unique pour chaque minute
+            minute_key = f"{date_object.year}-{date_object.month:02d}-{date_object.day:02d} {date_object.hour:02d}:{date_object.minute:02d}"
+            
+            # Incrémenter le compteur pour cette minute
+            if minute_key in commit_minutes:
+                commit_minutes[minute_key] += 1
             else:
-                commits_by_minute[minute] = 1
+                commit_minutes[minute_key] = 1
     
-    # Convertir notre dictionnaire en liste pour le JSON
+    # Convertir en liste de points pour le graphique
     result = []
-    for minute, count in commits_by_minute.items():
-        result.append({'minute': minute, 'count': count})
+    for minute, count in commit_minutes.items():
+        result.append({"minute": minute, "count": count})
+    
+    # Trier par date/heure
+    result = sorted(result, key=lambda x: x["minute"])
     
     return jsonify(results=result)
-
 @app.route("/histogramme/")
 def histogramme():
     return render_template("histogramme.html")

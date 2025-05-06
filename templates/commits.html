@@ -1,56 +1,92 @@
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Statistiques de Commits</title>
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activité des Commits</title>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-  </head>
-  <body>
-    <h1>Statistiques des Commits par Minute</h1>
-    <div id="chart_div" style="width: 900px; height: 500px;"></div>
+    <link rel="stylesheet" href="{{ url_for('static', filename='commits-style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Activité des Commits sur le Projet</h1>
+        
+        <div class="info-panel">
+            <h3>À propos de ce graphique</h3>
+            <p>Ce graphique présente le nombre de commits effectués minute par minute sur le repository GitHub du projet. Chaque barre représente le nombre de commits effectués durant une minute spécifique.</p>
+        </div>
+        
+        <div id="loading" class="loading">Chargement des données...</div>
+        <div id="chart_div"></div>
+    </div>
+
     <script>
-      google.charts.load('current', { packages: ['corechart'] });
-      google.charts.setOnLoadCallback(drawChart);
-
-      function drawChart() {
-        fetch('/get-commits-data/')
-          .then(response => response.json())
-          .then(data => {
-            // Créer un tableau de données pour Google Charts
-            var dataTable = new google.visualization.DataTable();
-            dataTable.addColumn('string', 'Minute');
-            dataTable.addColumn('number', 'Nombre de Commits');
+        google.charts.load('current', {packages: ['corechart']});
+        google.charts.setOnLoadCallback(fetchCommitData);
+        
+        function fetchCommitData() {
+            // Récupération des données depuis notre API
+            fetch('/commits-data/')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('loading').style.display = 'none';
+                    drawChart(data);
+                })
+                .catch(error => {
+                    document.getElementById('loading').textContent = 'Erreur lors du chargement des données.';
+                    console.error('Erreur:', error);
+                });
+        }
+        
+        function drawChart(data) {
+            // Préparation des données pour le graphique
+            var chartData = [['Minute', 'Nombre de Commits']];
             
-            // Trier les résultats par minute
-            data.results.sort((a, b) => a.minute - b.minute);
-            
-            // Ajouter les données au tableau
+            // Ajout des données
             data.results.forEach(entry => {
-              dataTable.addRow([entry.minute.toString(), entry.count]);
+                chartData.push([entry.minute, entry.count]);
             });
-
-            // Options pour l'histogramme
+            
+            var dataTable = google.visualization.arrayToDataTable(chartData);
+            
+            // Configuration du graphique
             var options = {
-              title: 'Nombre de Commits par Minute',
-              hAxis: {
-                title: 'Minute de l\'heure',
-                titleTextStyle: { color: '#333' }
-              },
-              vAxis: {
-                title: 'Nombre de Commits',
-                minValue: 0
-              },
-              legend: { position: 'none' }
+                title: 'Nombre de Commits par Minute',
+                titleTextStyle: {
+                    fontSize: 16,
+                    bold: true,
+                    color: '#4a6fb6'
+                },
+                hAxis: {
+                    title: 'Minute',
+                    titleTextStyle: {color: '#333'},
+                    slantedText: true,
+                    slantedTextAngle: 45
+                },
+                vAxis: {
+                    title: 'Nombre de Commits',
+                    titleTextStyle: {color: '#333'},
+                    minValue: 0
+                },
+                colors: ['#4a6fb6'],
+                animation: {
+                    startup: true,
+                    duration: 1000,
+                    easing: 'out'
+                },
+                legend: {position: 'none'},
+                bar: {groupWidth: '80%'}
             };
-
-            // Créer l'histogramme
+            
+            // Création du graphique à colonnes
             var chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
             chart.draw(dataTable, options);
-          })
-          .catch(error => {
-            console.error('Erreur lors de la récupération des données:', error);
-            document.getElementById('chart_div').innerHTML = 'Erreur lors de la récupération des données.';
-          });
-      }
+            
+            // Ajout d'un écouteur pour redimensionner le graphique
+            window.addEventListener('resize', function() {
+                chart.draw(dataTable, options);
+            });
+        }
     </script>
-  </body>
+</body>
 </html>
