@@ -36,7 +36,7 @@ def commits_graph():
 @app.route('/commits-data/')
 def get_commits_data():
     # Récupération des commits depuis l'API GitHub
-    response = urlopen('https://api.github.com/repos/SofianeKhedim/5MCSI_Metriques/commits')
+    response = urlopen('https://api.github.com/repos/Zvki1/5MCSI_Metriques/commits')
     raw_content = response.read()
     commits_data = json.loads(raw_content.decode('utf-8'))
     
